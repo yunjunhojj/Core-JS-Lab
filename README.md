@@ -152,3 +152,87 @@ pnpm test --coverage
 - [TypeScript 공식 문서](https://www.typescriptlang.org/)
 - [Vitest 공식 문서](https://vitest.dev/)
 - [ECMAScript 표준](https://tc39.es/ecma262/) 
+
+## ⚙️ 비동기 유틸리티 (Async Utilities)
+
+### promiseAll(iterable)
+- 여러 `Promise`(또는 값)를 받아 입력 순서를 보존하며 모두 완료되면 결과 배열을 반환합니다.
+- 하나라도 reject되면 즉시 같은 이유로 reject됩니다.
+
+```ts
+import { promiseAll } from "./src/async/promiseAll";
+
+const sleep = <T>(v: T, ms: number) => new Promise<T>(r => setTimeout(() => r(v), ms));
+
+const result = await promiseAll([sleep(1, 30), sleep(2, 10), 3]);
+// result === [1, 2, 3]
+```
+
+### promiseAllSettled(iterable)
+- 모든 입력이 settled될 때까지 기다린 뒤 각 항목의 상태와 값을 반환합니다.
+- 항상 입력 순서대로 결과를 반환합니다.
+
+```ts
+import { promiseAllSettled } from "./src/async/promiseAllSettled";
+
+const res = await promiseAllSettled([1, Promise.resolve(2), Promise.reject("e")]);
+// res === [
+//   { status: "fulfilled", value: 1 },
+//   { status: "fulfilled", value: 2 },
+//   { status: "rejected", reason: "e" },
+// ]
+```
+
+### retry(fn, options)
+- 실패 가능한 비동기 작업을 지정된 횟수만큼 재시도합니다.
+- 옵션
+  - `retries`(number): 최대 재시도 횟수
+  - `delayMs`(number): 각 시도 사이의 고정 대기 시간(ms)
+  - `backoff`(attempt => ms): 시도 번호 기반 동적 대기 시간(지수 백오프 등)
+  - `shouldRetry`(error => boolean): 특정 에러는 즉시 중단하고 reject
+
+```ts
+import { retry } from "./src/async/retry";
+
+let n = 0;
+const flaky = async () => {
+  if (n++ < 2) throw new Error("fail");
+  return "ok";
+};
+
+const value = await retry(flaky, { retries: 3, delayMs: 0 });
+// value === "ok" (최대 3번 시도 내 성공)
+```
+
+### asyncPool(limit, items, mapper)
+- 주어진 `items`를 `limit` 동시성으로 처리하면서, `mapper`의 결과를 입력 순서에 맞춰 반환합니다.
+
+```ts
+import { asyncPool } from "./src/async/asyncPool";
+
+const items = [1, 2, 3, 4, 5];
+const sleep = <T>(v: T, ms: number) => new Promise<T>(r => setTimeout(() => r(v), ms));
+
+const out = await asyncPool(2, items, async (x) => sleep(x * 10, 20));
+// out === [10, 20, 30, 40, 50]
+```
+
+### withConcurrency(limit)
+- 주어진 작업 함수 배열을 `limit` 동시성으로 실행하는 러너를 생성합니다.
+- 입력 순서를 보존하여 결과 배열을 반환하며, 하나라도 실패하면 즉시 reject됩니다.
+
+```ts
+import { withConcurrency } from "./src/async/withConcurrency";
+
+const run = withConcurrency(2);
+const tasks = [
+  () => fetch("/api/a").then(r => r.json()),
+  () => fetch("/api/b").then(r => r.json()),
+  () => fetch("/api/c").then(r => r.json()),
+];
+
+const results = await run(tasks);
+// results: [aResult, bResult, cResult]
+```
+
+> 참고: 위 유틸리티들은 입력 순서 보존과 에러 처리 일관성을 중시하며, 테스트(`src/async/*.test.ts`)로 기대 동작을 명확히 검증합니다. 
