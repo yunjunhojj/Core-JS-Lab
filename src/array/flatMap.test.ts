@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { flatMap } from "./flatMap";
 
 describe("flatMap", () => {
@@ -19,4 +19,17 @@ describe("flatMap", () => {
         const r = flatMap([1, 2, 3], (x) => x * 2);
         expect(r).toEqual([2, 4, 6]);
     });
+
+    it("sparse array: 구멍은 건너뛰고 호출", () => {
+        const a = [, 2, , 4] as number[];
+        const spy = vi.fn((x: number) => x * 2);
+        const r = flatMap(a, spy);
+        expect(r).toEqual([4, 8]);
+        expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+
+
+
+
 });
