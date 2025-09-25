@@ -40,7 +40,9 @@ describe("useQuery", () => {
     const error = new Error("Query failed");
     const queryFn = vi.fn().mockRejectedValue(error);
 
-    const { result } = renderHook(() => useQuery("test-key-3", queryFn));
+    const { result } = renderHook(() =>
+      useQuery("test-key-3", queryFn, { retry: false })
+    );
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
@@ -80,7 +82,9 @@ describe("useQuery", () => {
     const queryFn = vi.fn().mockRejectedValue(error);
     const onError = vi.fn();
 
-    renderHook(() => useQuery("test-key-6", queryFn, { onError }));
+    renderHook(() =>
+      useQuery("test-key-6", queryFn, { onError, retry: false })
+    );
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith(error);
