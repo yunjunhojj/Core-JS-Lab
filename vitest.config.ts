@@ -1,8 +1,13 @@
-
 import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+
 export default defineConfig({
-    test: {
-        include: ["src/**/*.test.ts"],
-        coverage: { reporter: ["text", "html"] }
-    }
+  plugins: [react()],
+  test: {
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
+    globals: true,
+    coverage: { reporter: ["text", "html"] },
+  },
 });
